@@ -1,101 +1,142 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Button, CircularProgress, Typography, Card, CardContent, CardMedia, MenuItem, Select } from '@mui/material';
+import axios from 'axios';
 
-export default function Home() {
+const SearchPage: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);  // Pagination state
+  const [totalResults, setTotalResults] = useState(0);  // Total results count
+  const [source, setSource] = useState('');  // Source filter
+  const [hasMore, setHasMore] = useState(true);
+
+  const sources = ['sketchfab', 'thingiverse', 'smithsonian'];  // Available sources
+
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('http://13.233.194.68:8080/get_annotations', {
+        params: {
+          search: searchTerm,
+          limit: 10,  // Limit the results per page
+          page: page,  // Use the current page for pagination
+          source: source  // Pass selected source as a filter
+        }
+      });
+      setResults(response.data.results);  // Set the results
+      setTotalResults(response.data.total);  // Total count
+      setHasMore(response.data.hasMore);  // If more pages exist
+    } catch (error) {
+      console.error('Error fetching annotations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = (uid: string) => {
+    const downloadUrl = `http://13.233.194.68:8080/download_model/${uid}`;
+    window.open(downloadUrl, '_blank');
+  };
+
+  const handleNextPage = () => {
+    setPage((prevPage) => prevPage + 1);
+  };
+
+  const handlePrevPage = () => {
+    setPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
+
+  useEffect(() => {
+    handleSearch();  // Fetch results when page or source changes
+  }, [page, source]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', padding: '2rem', color: 'white' }}>
+      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center' }}>Search 3D Models</Typography>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+        <TextField
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          label="Search models"
+          variant="outlined"
+          sx={{ backgroundColor: '#fff', borderRadius: '4px', width: '60%' }}
+        />
+        <Button variant="contained" color="primary" sx={{ ml: 2 }} onClick={handleSearch}>
+          Search
+        </Button>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+        <Select
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+          displayEmpty
+          sx={{ backgroundColor: '#fff', borderRadius: '4px' }}
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <MenuItem value="">All Sources</MenuItem>
+          {sources.map((src) => (
+            <MenuItem key={src} value={src}>{src}</MenuItem>
+          ))}
+        </Select>
+      </Box>
+
+      {loading && <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>}
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', mt: 4 }}>
+        {results.map((result, index) => (
+          <Card key={index} sx={{ backgroundColor: '#1e1e1e', width: '80%', color: 'white', display: 'flex', alignItems: 'center' }}>
+            {result.thumbnail && (
+              <CardMedia
+                component="img"
+                image={result.thumbnail}
+                alt={result.name}
+                sx={{ width: 150, height: 150 }}
+              />
+            )}
+            <CardContent>
+              <Typography variant="h6">{result.name}</Typography>
+              <Typography variant="body2" sx={{ color: '#aaaaaa' }}>
+                {result.description || "No description available."}
+              </Typography>
+              <Button
+                variant="contained"
+                color="secondary"
+                sx={{ mt: 2, mr: 2 }}
+                href={result.viewerUrl}
+                target="_blank"
+              >
+                View Model
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{ mt: 2 }}
+                onClick={() => handleDownload(result.uid)}
+              >
+                Download Model
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+
+      {!loading && results.length === 0 && (
+        <Typography variant="h6" sx={{ textAlign: 'center', mt: 4 }}>
+          No models found. Try a different search term.
+        </Typography>
+      )}
+
+      {/* Pagination Controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Button disabled={page === 1} onClick={handlePrevPage} sx={{ mr: 2 }}>Previous</Button>
+        <Typography>Page {page}</Typography>
+        <Button disabled={!hasMore} onClick={handleNextPage} sx={{ ml: 2 }}>Next</Button>
+      </Box>
+    </Box>
   );
-}
+};
+
+export default SearchPage;
