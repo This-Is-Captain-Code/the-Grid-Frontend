@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, Card, CardContent, CardMedia, MenuItem, Select } from '@mui/material';
 import axios from 'axios';
+import LoginButton from './components/LoginButton';
 
 const SearchPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,16 +12,17 @@ const SearchPage: React.FC = () => {
   const [totalResults, setTotalResults] = useState(0);  // Total results count
   const [source, setSource] = useState('');  // Source filter
   const [hasMore, setHasMore] = useState(true);
+  const [limit] = useState(10);  // You can keep this constant to maintain limit per page
 
   const sources = ['sketchfab', 'thingiverse', 'smithsonian'];  // Available sources
 
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://13.233.194.68:8080/get_annotations', {
+      const response = await axios.get('http://35.154.220.76:8080/get_annotations', {
         params: {
           search: searchTerm,
-          limit: 10,  // Limit the results per page
+          limit: limit,  // Limit the results per page
           page: page,  // Use the current page for pagination
           source: source  // Pass selected source as a filter
         }
@@ -36,16 +38,18 @@ const SearchPage: React.FC = () => {
   };
 
   const handleDownload = (uid: string) => {
-    const downloadUrl = `http://13.233.194.68:8080/download_model/${uid}`;
+    const downloadUrl = `http://35.154.220.76:8080/download_model/${uid}`;
     window.open(downloadUrl, '_blank');
   };
 
   const handleNextPage = () => {
-    setPage((prevPage) => prevPage + 1);
+    if (hasMore) {
+      setPage((prevPage) => prevPage + 1); // Only increase page if there's more
+    }
   };
 
   const handlePrevPage = () => {
-    setPage((prevPage) => Math.max(prevPage - 1, 1));
+    setPage((prevPage) => Math.max(prevPage - 1, 1)); // Prevent page going below 1
   };
 
   useEffect(() => {
@@ -54,7 +58,9 @@ const SearchPage: React.FC = () => {
 
   return (
     <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', padding: '2rem', color: 'white' }}>
+      <LoginButton />
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center' }}>Search 3D Models</Typography>
+
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <TextField
