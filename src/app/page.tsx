@@ -2,19 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, Card, CardContent, CardMedia, MenuItem, Select } from '@mui/material';
 import axios from 'axios';
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Metaplex, walletAdapterIdentity } from "@metaplex-foundation/js";
+import { Connection, clusterApiUrl } from "@solana/web3.js";
 import LoginButton from './components/LoginButton';
 
+const connection = new Connection(clusterApiUrl("testnet"));
+
 const SearchPage: React.FC = () => {
+  const { publicKey, wallet, connect, connected } = useWallet();
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);  // Pagination state
-  const [totalResults, setTotalResults] = useState(0);  // Total results count
-  const [source, setSource] = useState('');  // Source filter
+  const [page, setPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [source, setSource] = useState('');
   const [hasMore, setHasMore] = useState(true);
-  const [limit] = useState(10);  // You can keep this constant to maintain limit per page
+  const [limit] = useState(10);
 
-  const sources = ['sketchfab', 'thingiverse', 'smithsonian'];  // Available sources
+  const sources = ['sketchfab', 'thingiverse', 'smithsonian'];
 
   const handleSearch = async () => {
     setLoading(true);
@@ -22,14 +28,14 @@ const SearchPage: React.FC = () => {
       const response = await axios.get('http://35.154.167.42:8080/get_annotations', {
         params: {
           search: searchTerm,
-          limit: limit,  // Limit the results per page
-          page: page,  // Use the current page for pagination
-          source: source  // Pass selected source as a filter
-        }
+          limit: limit,
+          page: page,
+          source: source,
+        },
       });
-      setResults(response.data.results);  // Set the results
-      setTotalResults(response.data.total);  // Total count
-      setHasMore(response.data.hasMore);  // If more pages exist
+      setResults(response.data.results);
+      setTotalResults(response.data.total);
+      setHasMore(response.data.hasMore);
     } catch (error) {
       console.error('Error fetching annotations:', error);
     } finally {
@@ -44,23 +50,62 @@ const SearchPage: React.FC = () => {
 
   const handleNextPage = () => {
     if (hasMore) {
-      setPage((prevPage) => prevPage + 1); // Only increase page if there's more
+      setPage((prevPage) => prevPage + 1);
     }
   };
 
   const handlePrevPage = () => {
-    setPage((prevPage) => Math.max(prevPage - 1, 1)); // Prevent page going below 1
+    setPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
+
+  const mintNFT = async (name: string, uri: string) => {
+    if (!connected) {
+      try {
+        await connect();
+      } catch (error) {
+        console.error("Error connecting to wallet:", error);
+        alert("Error connecting to wallet: " + error.message);
+        return;
+      }
+    }
+
+    if (!wallet || !publicKey) {
+      alert("Wallet connection failed! Please connect your wallet.");
+      return;
+    }
+
+    try {
+      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
+
+      const { nft } = await metaplex.nfts().create({
+        uri,
+        name,
+        sellerFeeBasisPoints: 500,  // 5% royalties
+        maxSupply: 1,
+        creators: [
+          {
+            address: publicKey,
+            share: 100,
+          },
+        ],
+      });
+
+      console.log("NFT minted:", nft);
+      alert(`NFT minted successfully! Address: ${nft.mintAddress.toBase58()}`);
+    } catch (error) {
+      console.error("Error minting NFT:", error);
+      alert("Error minting NFT: " + error.message);
+    }
   };
 
   useEffect(() => {
-    handleSearch();  // Fetch results when page or source changes
+    handleSearch();
   }, [page, source]);
 
   return (
     <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', padding: '2rem', color: 'white' }}>
       <LoginButton />
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center' }}>Search 3D Models</Typography>
-
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <TextField
@@ -124,6 +169,15 @@ const SearchPage: React.FC = () => {
               >
                 Download Model
               </Button>
+              <Button
+                variant="contained"
+                color="success"
+                sx={{ mt: 2 }}
+                onClick={() => mintNFT(result.name, result.thumbnail)}
+                disabled={!publicKey}
+              >
+                Mint NFT
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -135,7 +189,6 @@ const SearchPage: React.FC = () => {
         </Typography>
       )}
 
-      {/* Pagination Controls */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <Button disabled={page === 1} onClick={handlePrevPage} sx={{ mr: 2 }}>Previous</Button>
         <Typography>Page {page}</Typography>

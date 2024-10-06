@@ -1,10 +1,11 @@
+// Rename file from LoginButton.tsx to WalletButton.tsx
 "use client";
 import React from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Box, Typography } from "@mui/material";
-import { useWallet } from "@solana/wallet-adapter-react";
 
-const LoginButton: React.FC = () => {
+const WalletButton: React.FC = () => {
   const { connected, publicKey } = useWallet();
 
   return (
@@ -19,4 +20,4 @@ const LoginButton: React.FC = () => {
   );
 };
 
-export default LoginButton;
+export default WalletButton;
