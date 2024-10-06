@@ -19,7 +19,7 @@ const SearchPage: React.FC = () => {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://35.154.220.76:8080/get_annotations', {
+      const response = await axios.get('http://35.154.167.42:8080/get_annotations', {
         params: {
           search: searchTerm,
           limit: limit,  // Limit the results per page
@@ -38,7 +38,7 @@ const SearchPage: React.FC = () => {
   };
 
   const handleDownload = (uid: string) => {
-    const downloadUrl = `http://35.154.220.76:8080/download_model/${uid}`;
+    const downloadUrl = `http://35.154.167.42:8080/download_model/${uid}`;
     window.open(downloadUrl, '_blank');
   };
 
