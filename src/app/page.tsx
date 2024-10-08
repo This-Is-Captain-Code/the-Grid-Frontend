@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, Card, CardContent, CardMedia } from '@mui/material';
 import axios from 'axios';
 import { useWallet } from "@solana/wallet-adapter-react";
+
 import { Connection, clusterApiUrl } from '@solana/web3.js';
 import dynamic from 'next/dynamic';
 import { Orbitron } from 'next/font/google'; // Import Handjet font
@@ -86,6 +87,7 @@ const Page: React.FC = () => {
         params: {
           search: searchTerm,
           limit: limit,
+
           page: currentPage,
           source: source
         }
@@ -135,6 +137,7 @@ const Page: React.FC = () => {
         src={backgroundVideoUrl}
       />
 
+
       {/* Overlay */}
       <Box
         sx={{
@@ -151,6 +154,7 @@ const Page: React.FC = () => {
       {/* Login Button at Top Right */}
       <Box sx={{ position: 'absolute', top: 20, right: 20, zIndex: 1 }}>
         <LoginButton />
+
       </Box>
 
       {/* Main Content */}
@@ -181,7 +185,6 @@ const Page: React.FC = () => {
         >
           GRID
         </Typography>
-
         {/* Search Bar */}
         <Box
           sx={{
