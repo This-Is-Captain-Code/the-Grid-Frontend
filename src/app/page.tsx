@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, Card, CardContent, CardMedia } from '@mui/material';
 import axios from 'axios';
 import { useWallet } from "@solana/wallet-adapter-react";
-
+import { Metaplex, walletAdapterIdentity } from '@metaplex-foundation/js';  // New Metaplex SDK Core implementation
 import { Connection, clusterApiUrl } from '@solana/web3.js';
 import dynamic from 'next/dynamic';
 import { Orbitron } from 'next/font/google'; // Import Handjet font
@@ -76,6 +76,67 @@ const Page: React.FC = () => {
       clearTimeout(pauseTimeout);
     };
   }, [currentSentenceIndex]);
+
+  const handleDownload = (uid: string) => {
+    const downloadUrl = `http://35.154.167.42:8080/download_model/${uid}`;
+    window.open(downloadUrl, '_blank');
+  };
+
+  // Mint NFT using Metaplex Core
+  const mintNFT = async (metadata: any) => {
+    if (!publicKey) {
+      alert("Please connect your wallet to mint an NFT");
+      return;
+    }
+
+    try {
+      // Initialize Metaplex SDK with wallet identity
+      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity({ publicKey, signTransaction }));
+
+      // Create the NFT using Core standard
+      const { nft } = await metaplex.nfts().create({
+        uri: metadata.download_link,  // The download URL for the 3D model
+        name: metadata.name,
+        sellerFeeBasisPoints: 500,  // 5% royalties
+        creators: [{ address: publicKey, share: 100 }],  // Creator is the wallet owner
+        image: metadata.image,  // Thumbnail image URL
+        description: metadata.description  // Model description
+      });
+
+      console.log('NFT Minted:', nft);
+      return nft;
+    } catch (error) {
+      console.error('Error minting NFT:', error);
+      throw error;
+    }
+  };
+
+  // Handle NFT minting on the frontend
+  const handleMintNFT = async (uid: string) => {
+    if (!publicKey) {
+      alert("Please connect your wallet to mint an NFT");
+      return;
+    }
+
+    try {
+      // Fetch metadata for the 3D model from the backend
+      const response = await axios.post('http://35.154.167.42:8080/mint_nft', {
+        uid: uid,
+        wallet: publicKey.toBase58()  // User's wallet public address
+      });
+
+      const { metadata } = response.data;
+      console.log('Metadata for NFT:', metadata);
+
+      // Call mintNFT function to mint the NFT
+      const mintedNFT = await mintNFT(metadata);
+      console.log('Successfully minted NFT:', mintedNFT);
+    } catch (error) {
+      console.error('Error during minting process:', error);
+    }
+  };
+
+
 
   // Fetch data
   const handleSearch = async () => {
@@ -206,7 +267,7 @@ const Page: React.FC = () => {
             variant="outlined"
             fullWidth
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 1)',
               borderRadius: '4px',
               border: '2px solid #FFFFFF',
               boxShadow: '0 0 10px #FFFFFF',
@@ -255,15 +316,16 @@ const Page: React.FC = () => {
             <Card
               key={index}
               sx={{
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'rgba(23, 23, 23, 0.7)', // Match background color
                 color: 'white',
-                width: { xs: '100%', sm: '45%', md: '23%' }, // Adjust width to ensure 4 cards per row
+                width: { xs: '100%', sm: '45%', md: '23%' },
                 margin: 1,
                 borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.2)', // Match border style
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                 transition: 'transform 0.3s, box-shadow 0.3s',
                 '&:hover': {
-                  transform: 'scale(1.05)', // Slightly enlarge on hover
+                  transform: 'scale(1.05)',
                   boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
                 },
               }}
@@ -273,7 +335,7 @@ const Page: React.FC = () => {
                   component="img"
                   image={result.thumbnail}
                   alt={result.name}
-                  sx={{ height: 200, borderTopLeftRadius: '10px', borderTopRightRadius: '10px' }} // Rounded corners
+                  sx={{ height: 200, borderTopLeftRadius: '10px', borderTopRightRadius: '10px' }}
                 />
               )}
               <CardContent sx={{ flexGrow: 1 }}>
@@ -281,19 +343,22 @@ const Page: React.FC = () => {
                   {result.name}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#aaaaaa', mb: 2 }}>
-                  {truncateDescription(result.description || "No description available.", 7)} {/* Truncate to 10 words */}
+                  {truncateDescription(result.description || "No description available.", 7)}
                 </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                   <Button
                     variant="contained"
                     color="secondary"
                     href={result.viewerUrl}
                     target="_blank"
                     sx={{
-                      backgroundColor: '#00FF00',
+                      backgroundColor: 'rgba(23, 23, 23, 0.7)', // Match button color
                       '&:hover': {
-                        backgroundColor: '#00CC00', // Lighter green on hover
+                        backgroundColor: 'rgba(0, 204, 0, 0.7)',
+                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.8)', // Glowing effect on hover
                       },
+                      border: '1px solid rgba(255, 255, 255, 0.2)', // Match border
+                      transition: 'box-shadow 0.3s ease',
                     }}
                   >
                     View Model
@@ -303,27 +368,33 @@ const Page: React.FC = () => {
                     color="primary"
                     onClick={() => handleDownload(result.uid)}
                     sx={{
-                      backgroundColor: '#00FF00',
+                      backgroundColor: 'rgba(23, 23, 23, 0.7)', // Match button color
                       '&:hover': {
-                        backgroundColor: '#00CC00', // Lighter green on hover
+                        backgroundColor: 'rgba(0, 204, 0, 0.7)',
+                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.8)', // Glowing effect on hover
                       },
+                      border: '1px solid rgba(255, 255, 255, 0.2)', // Match border
+                      transition: 'box-shadow 0.3s ease',
                     }}
                   >
                     Download
                   </Button>
                 </Box>
               </CardContent>
-              <Box sx={{ p: 2 }}>
+              <Box sx={{ p: 2, mt: 0 }}>
                 <Button
                   variant="contained"
                   color="secondary"
                   fullWidth
                   onClick={() => handleMintNFT(result.uid)}
                   sx={{
-                    backgroundColor: '#00FF00',
+                    backgroundColor: 'rgba(23, 23, 23, 0.7)', // Match button color
                     '&:hover': {
-                      backgroundColor: '#00CC00', // Lighter green on hover
+                      backgroundColor: 'rgba(0, 204, 0, 0.7)',
+                      boxShadow: '0 0 10px rgba(0, 255, 0, 0.8)', // Glowing effect on hover
                     },
+                    border: '1px solid rgba(255, 255, 255, 0.2)', // Match border
+                    transition: 'box-shadow 0.3s ease',
                   }}
                 >
                   Mint as NFT
